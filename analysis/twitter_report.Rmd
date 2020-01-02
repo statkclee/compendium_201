@@ -1,0 +1,93 @@
+---
+title: "트위터 데이터 분석"
+output: 
+  html_document:
+    toc: yes
+    toc_float: true
+    number_section: true
+    self_contained: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "..")
+```
+
+# 트윗 감성분석
+
+트위터 트윗에 담긴 텍스트 내용을 기반으로 감정을 예측하는 모형과 함께 EDA도 수행해보자.
+
+# 환경설정
+
+```{r configuration}
+library(tidyverse)
+library(here)
+
+cat("현재 작업 디렉토리:", here())
+```
+
+# 데이터 가져오기
+
+[GitHub awesome-twitter-data](https://github.com/shaypal5/awesome-twitter-data) 다양한 트위터 데이터가 정말 잘 정리되어 있다.
+이중 [Weather sentiment](https://data.world/crowdflower/weather-sentiment#) 웹사이트에서 데이터를 다운로드 받아 분석을 진행한다. 원본 출처에서 다운로드 받은 데이터는 [`weather-agg-DFE.csv`](../data/weather-agg-DFE.csv)에 담겨져 있어 클릭하여 다운로드 받을 수도 있다.
+
+# 데이터 살펴보기
+
+```{r inspect-data}
+tw_dat <- read_csv("data/weather-agg-DFE.csv")
+
+tw_df <- tw_dat %>% 
+  select(tweet_id, emotion = what_emotion_does_the_author_express_specifically_about_the_weather, tweet_text, date=`_last_judgment_at`)
+
+tw_df %>% 
+  sample_n(100) %>% 
+  DT::datatable()
+```
+
+# 데이터 전처리
+
+Y 예측감정변수를 `count()` 함수로 긍정/부정으로 나눔.
+
+```{r preprocess-data}
+tw_df %>% 
+  count(emotion, name="빈도수")
+```
+
+감성 예측변수를 범주형 변수로 처리하여 감성분석을 위한 준비를 마무리 한다.
+
+```{r modeling-data}
+xy_df <- tw_df %>% 
+  filter(emotion %in% c("Negative", "Positive")) %>% 
+  select(tweet_id, text = tweet_text, emotion) %>% 
+  mutate(y = factor(emotion, levels=c("Negative", "Positive"), labels=c("부정", "긍정")))
+
+xy_df %>% 
+  count(emotion, y) %>% 
+  spread(y, n, fill = 0)
+```
+
+# 시각화
+
+```{r viz-twitter}
+library(tidytext)
+
+xy_df %>% 
+  select(-emotion) %>% 
+  unnest_tokens(word, text) %>% # 토큰화
+  anti_join(stop_words) %>%         # 불용어처리
+  group_by(y) %>% 
+  count(word, sort=TRUE, name="빈도수") %>% 
+  ungroup() %>% 
+  top_n(20, wt=빈도수) %>% 
+  arrange(y, -빈도수) %>% 
+  ggplot(aes(x=fct_reorder(word, 빈도수), y=빈도수, fill=y)) +
+    geom_col() +
+    coord_flip() +
+    facet_wrap(~y, scales = "free") +
+    labs(x="",y="") +
+    theme(legend.position = "none")
+
+```
+
