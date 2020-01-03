@@ -17,7 +17,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-```{r setup, include=FALSE}
+```{r setup2, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE,
                       comment="", digits = 3, tidy = FALSE, prompt = FALSE, fig.align = 'center')
 
@@ -37,6 +37,17 @@ use_condaenv("anaconda3")
     - `install.packages(c("tidyverse", "DT", "here", "stopwords", "tidytext"), dependencies=TRUE)`
 
 [^install-latest-R]: [Lisa Tagliaferri (July 5, 2018), "How To Install R on Ubuntu 18.04"](https://www.digitalocean.com/community/tutorials/how-to-install-r-on-ubuntu-18-04)
+
+# 한국어 `make` 동영상 {#korean-make}
+
+아래 유튜브 동영상이 보이지 않는 경우, 즉 **{{% youtube "jnJL6ppn26Q" %}}** 메시지만 보이고 아무것도 보이지 않는 경우, `blogdown::install_hugo('0.54.0', force = TRUE)` 명령어로 다시 `blogdown` 휴고를 설치한다. [^blogdown-hugo]
+
+[^blogdown-hugo]: [stackoverflow, "Cannot use Markdown shortcodes in Blogdown's Rmd files"](https://stackoverflow.com/questions/55856904/cannot-use-markdown-shortcodes-in-blogdowns-rmd-files)
+
+```{r korean-make, eval = TRUE}
+blogdown::shortcode("youtube", "jnJL6ppn26Q")
+```
+
 
 # 다양한 문서 자동생성 {#makefile}
 
@@ -80,22 +91,28 @@ analysis/twitter_report.html : analysis/twitter_report.Rmd
 ## 패턴 `Makefile` {#automte-with-pattern-Make}
 
 파일을 매번 일일이 지정하면 힘드니, `%`, `$<` 기호를 패턴으로 지정하여 자동화한다.
+변수(Variable)를 도입해서 깔끔한 `Makefile`을 제작하는 것도 흔히 사용되는 패턴이다.
+`analysis` 폴더를 변수로 지정하여 `Makefile` 중복을 없앤다. 
 
 ```{r makefile-pattern-with-r-pattern, eval=FALSE}
-%.html : %.Rmd
-    Rscript -e 'rmarkdown::render("$<")'
+RMD_DIR = analysis
+
+${RMD_DIR}/twitter_report.html: ${RMD_DIR}/twitter_report.Rmd
+	Rscript -e 'rmarkdown::render("$<")'
 ```
 
 ## "phony" 규칙 {#automte-with-phony-Make}
 
 `all` 규칙을 통해 연관된 모든 파일들이 실행되게 한다.
+의존성이 여러번 걸린 경우 `all`에 TARGET을 설정하게 되면 무조건 해당 결과물을 생성시키기 위해 연관된 규칙이 모두 실행된다.
 
 ```{r makefile-phony-with-r, eval=FALSE}
-all : twitter_report.html
-    echo All files are up to date.
+RMD_DIR = analysis
 
-%.html : %.Rmd
-    Rscript -e 'rmarkdown::render("$<")'
+all: ${RMD_DIR}/%.html
+
+${RMD_DIR}/%.html: ${RMD_DIR}/twitter_report.Rmd
+	Rscript -e 'rmarkdown::render("$<")'
 ```
 
 
@@ -104,31 +121,13 @@ all : twitter_report.html
 `clean` 규칙을 통해 `Make`을 통해 만들어진 모든 파일들을 제거한다.
 
 ```{r makefile-clean-with-r, eval=FALSE}
-all : analysis/twitter_report.html
-    echo All files are up to date.
+RMD_DIR = analysis
 
-clean : 
-    rm -f analysis/twitter_report.html
+all: ${RMD_DIR}/%.html
 
-%.html : %.Rmd
-    Rscript -e 'rmarkdown::render("$<")'
-```
-
-## 변수로 깔끔한 코드 {#automte-with-variable-Make}
-
-변수(Variable)를 도입해서 깔끔한 `Makefile`을 제작하는 것도 흔히 사용되는 패턴이다.
-
-```{r makefile-clean-with-r-variable, eval=FALSE}
-RMD_FILE= twitter_report
-RMD_DIR= analysis
-
-all: $(RMD_DIR)/$(RMD_FILE).html, $(RMD_DIR)/$(RMD_FILE).tex
-
-clean: 
-    rm -f *.md *.html *.pdf *.tex *.docx
-
-$(RMD_DIR)/$(RMD_FILE).html: $(RMD_DIR)/$(RMD_FILE).tex
-    Rscript -e 'rmarkdown::render("$<")'
-
-.PHONY: all clean    
+${RMD_DIR}/%.html: ${RMD_DIR}/twitter_report.Rmd
+	Rscript -e 'rmarkdown::render("$<")'
+	
+clean:
+	rm -rf ${RMD_DIR}/*.html
 ```

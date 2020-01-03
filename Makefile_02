@@ -1,0 +1,4 @@
+RMD_DIR = analysis
+
+${RMD_DIR}/twitter_report.html: ${RMD_DIR}/twitter_report.Rmd
+	Rscript -e 'rmarkdown::render("$<")'

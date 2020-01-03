@@ -4,6 +4,3 @@ all: ${RMD_DIR}/%.html
 
 ${RMD_DIR}/%.html: ${RMD_DIR}/twitter_report.Rmd
 	Rscript -e 'rmarkdown::render("$<")'
-	
-clean:
-	rm -rf ${RMD_DIR}/*.html
